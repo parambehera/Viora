@@ -13,20 +13,33 @@ const Room = () => {
   const [audioEnabled, setAudioEnabled] = useState(true)
   const [videoEnabled, setVideoEnabled] = useState(true)
   const [isScreenSharing, setIsScreenSharing] = useState(false)
-  const [isDarkTheme, setIsDarkTheme] = useState(true)
   const [isRemoteVideoMain, setIsRemoteVideoMain] = useState(false)
   const mainVideoRef = useRef(null)
   const pipVideoRef = useRef(null)
   const navigate = useNavigate();
 
+  // Helper function to safely get the email string
+  const getEmailString = (data) => {
+    if (typeof data === 'string') {
+      return data;
+    }
+    if (typeof data === 'object' && data !== null && typeof data.message === 'string') {
+      return data.message;
+    }
+    // Fallback if data is neither a string nor an object with a message property
+    console.warn("Unexpected format for emailId/from:", data);
+    return ""; // Return an empty string or handle as appropriate
+  };
+
   const handleNewUserJoined = useCallback(
     async ({ emailId }) => {
       toast.success("New User joined");
-      setRemoteEmailId(emailId)
+      // Use the helper function here
+      setRemoteEmailId(getEmailString(emailId));
 
       setTimeout(async () => {
         if (myStream) {
-          console.log("User 1: Sending stream and creating offer")
+          // console.log("User 1: Sending stream and creating offer")
           await sendStream(myStream)
           const offer = await createOffer()
           socket.emit("user-call", { emailId, offer })
@@ -39,11 +52,12 @@ const Room = () => {
   const handleIncomingCall = useCallback(
     async (data) => {
       const { from, offer } = data
-      console.log("Incoming call from", from)
-      setRemoteEmailId(from)
+      // console.log("Incoming call from", from)
+      // Use the helper function here
+      setRemoteEmailId(getEmailString(from));
 
       if (myStream) {
-        console.log("User 2: Sending stream and creating answer")
+        // console.log("User 2: Sending stream and creating answer")
         await sendStream(myStream)
         const ans = await createAnswer(offer)
         socket.emit("call-accepted", { emailId: from, ans })
@@ -63,10 +77,10 @@ const Room = () => {
   const handleCallAccepted = useCallback(
     async (data) => {
       const { ans } = data
-      console.log("Call got accepted")
+      // console.log("Call got accepted")
       await setRemoteAnswer(ans)
       if (myStream) {
-        console.log("User 1: Sending stream after call accepted")
+        // console.log("User 1: Sending stream after call accepted")
         setTimeout(() => {
           sendStream(myStream)
         }, 500)
@@ -122,7 +136,7 @@ const Room = () => {
 
   useEffect(() => {
     if (myStream && remoteEmailId) {
-      console.log("Auto-sending stream for established connection")
+      // console.log("Auto-sending stream for established connection")
       setTimeout(() => {
         sendStream(myStream)
       }, 1000)
@@ -136,7 +150,7 @@ const Room = () => {
         video: true,
       })
       setMyStream(stream)
-      console.log("Got media stream with tracks:", stream.getTracks().length)
+      // console.log("Got media stream with tracks:", stream.getTracks().length)
     } catch (error) {
       console.error("Error accessing media devices:", error)
     }
@@ -146,15 +160,11 @@ const Room = () => {
     getUserMediaStream()
   }, [getUserMediaStream])
 
-  // Enhanced video layout logic
   useEffect(() => {
     if (mainVideoRef.current) {
-      // When no remote stream, always show my video as main
-      // When remote stream exists, respect the toggle state
       const mainStream = !remoteStream ? myStream : (isRemoteVideoMain ? remoteStream : myStream)
       if (mainStream) {
         mainVideoRef.current.srcObject = mainStream
-        // Mute main video only if it's showing my own video
         mainVideoRef.current.muted = !remoteStream || !isRemoteVideoMain
       }
     }
@@ -162,26 +172,20 @@ const Room = () => {
 
   useEffect(() => {
     if (pipVideoRef.current) {
-      // PIP should only show when we have both streams
-      // PIP shows the opposite of main video
       const pipStream = !remoteStream ? null : (isRemoteVideoMain ? myStream : remoteStream)
       if (pipStream) {
         pipVideoRef.current.srcObject = pipStream
-        // Mute PIP video if it's showing my own video
         pipVideoRef.current.muted = isRemoteVideoMain
       }
     }
   }, [isRemoteVideoMain, remoteStream, myStream])
 
-  // Auto-set remote video as main when it first arrives
   useEffect(() => {
     if (remoteStream && !isRemoteVideoMain) {
-      // Automatically switch to remote video as main when remote stream becomes available
       setIsRemoteVideoMain(true)
     }
   }, [remoteStream])
 
-  // Reset toggle state when remote user disconnects
   useEffect(() => {
     if (!remoteStream) {
       setIsRemoteVideoMain(false)
@@ -206,9 +210,7 @@ const Room = () => {
     }
   }
 
-  // Enhanced toggle function
   const toggleVideoLayout = () => {
-    // Only allow toggle when both streams are available
     if (remoteStream && myStream) {
       setIsRemoteVideoMain(!isRemoteVideoMain)
     }
@@ -219,7 +221,8 @@ const Room = () => {
       myStream.getTracks().forEach((track) => track.stop())
       setMyStream(null)
     }
-    socket.emit("disconnect-room", { emailId: remoteEmailId })
+    // Ensure remoteEmailId is a string before emitting
+    socket.emit("disconnect-room", { emailId: getEmailString(remoteEmailId) })
     setRemoteEmailId("")
     navigate("/");
     toast.error("User ended-up the call");
@@ -244,34 +247,9 @@ const Room = () => {
     }
   }
 
-  const toggleTheme = () => {
-    setIsDarkTheme(!isDarkTheme)
-  }
-
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${isDarkTheme ? "bg-gradient-to-b from-black via-gray-900 to-gray-800" : "bg-gray-100"} relative`}>
-      {/* Top Bar: Theme Toggle (left) and Branding (right) */}
+    <div className={`min-h-screen transition-colors duration-300 bg-gradient-to-b from-black via-gray-900 to-gray-800 relative`}>
       <div className="w-full flex justify-between items-center px-8 pt-6 absolute top-0 left-0 z-50">
-        {/* Theme Toggle Button */}
-        <button
-          onClick={toggleTheme}
-          className="w-10 h-10 rounded-full bg-gray-600 hover:bg-gray-500 flex items-center justify-center transition-colors duration-200"
-        >
-          {isDarkTheme ? (
-            <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
-                clipRule="evenodd"
-              />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-            </svg>
-          )}
-        </button>
-        {/* Viora Branding */}
         <h1
           className="text-3xl font-extrabold text-orange-500 cursor-pointer tracking-wide bg-transparent"
           onClick={() => navigate("/")}
@@ -280,45 +258,33 @@ const Room = () => {
         </h1>
       </div>
       <div className="container mx-auto px-4 py-4 h-screen flex items-center justify-center">
-        {/* Main Video Call Container */}
         <div
-          className={`relative w-full max-w-4xl lg:max-w-6xl h-full max-h-[600px] lg:max-h-[500px] rounded-3xl overflow-hidden shadow-2xl ${
-            isDarkTheme ? "bg-gray-800" : "bg-white"
-          }`}
+          className={`relative w-full max-w-4xl lg:max-w-6xl h-full max-h-[600px] lg:max-h-[500px] rounded-3xl overflow-hidden shadow-2xl bg-gray-800`}
         >
-          {/* Settings/Options Button */}
-         
-
-          {/* Connected User Info */}
           {remoteEmailId && (
-            <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-20">
+            // Adjusted positioning for the "Connected to:" button
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20"> {/* Changed top-16 to top-4 */}
               <div
-                className={`px-4 py-2 rounded-full backdrop-blur-sm border ${
-                  isDarkTheme ? "bg-black/30 border-gray-600 text-white" : "bg-white/30 border-gray-300 text-gray-900"
-                }`}
+                className={`px-4 py-2 rounded-full backdrop-blur-sm border bg-black/30 border-gray-600  text-white`}
               >
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium">Connected to: {remoteEmailId}</span>
+                  {/* Ensure remoteEmailId is a string here */}
+                  <span className="text-sm font-medium"> {remoteEmailId}</span>
                 </div>
               </div>
             </div>
           )}
-
-          {/* Video Background */}
           <div className="absolute inset-0">
-            {/* Main Video (Full Background) */}
             <video
               ref={mainVideoRef}
               autoPlay
               playsInline
               className="w-full h-full object-cover"
             />
-
-            {/* Picture-in-Picture Video - Only show when both streams exist */}
             {remoteStream && myStream && (
-              <div 
-                className="absolute top-4 right-16 lg:right-20 w-24 h-32 lg:w-32 lg:h-40 rounded-xl overflow-hidden border-2 border-white shadow-lg cursor-pointer hover:scale-105 transition-transform duration-200"
+              <div
+                className="absolute top-4 right-1 lg:right-20 w-24 h-32 lg:w-32 lg:h-40 rounded-xl overflow-hidden border-2 border-white shadow-lg cursor-pointer hover:scale-105 transition-transform duration-200"
                 onClick={toggleVideoLayout}
               >
                 <video
@@ -342,7 +308,7 @@ const Room = () => {
             {!myStream && (
               <>
                 {/* User Avatar */}
-                <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-gray-300 flex items-center justify-center mb-4">
+                <div className="w-15 h-15 lg:w-24 lg:h-24 rounded-full bg-gray-300 flex items-center justify-center mb-4">
                   <svg className="w-10 h-10 lg:w-12 lg:h-12 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
@@ -354,7 +320,8 @@ const Room = () => {
 
                 {/* User Name */}
                 <h2 className="text-white text-lg lg:text-xl font-medium mb-2">
-                  {remoteEmailId ? "You" : "Waiting for connection..."}
+                  {/* Ensure remoteEmailId is a string here */}
+                  {remoteEmailId ? `You are connected to ${remoteEmailId}` : "Waiting for connection..."}
                 </h2>
 
                 {/* Connection Status */}
@@ -455,7 +422,7 @@ const Room = () => {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default Room

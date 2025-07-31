@@ -34,7 +34,7 @@ export default function Auth() {
         // navigate("/home"); // Uncomment this if you want to navigate after successful login
       }
     } catch (error) {
-      console.log(error);
+      // console.log(error);
       let msg = error.response?.data?.message || "Something went wrong!";
       toast.error(msg);
       // setError(msg); // Set error message
@@ -152,20 +152,7 @@ export default function Auth() {
               />
             </div>
 
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center">
-                <input
-                  id="remember"
-                  type="checkbox"
-                  className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-600 rounded bg-gray-700 cursor-pointer"
-                />
-                <label htmlFor="remember" className="ml-2 text-sm text-gray-300 cursor-pointer">
-                  Remember me
-                </label>
-              </div>
-              {/* You could add a "Forgot Password?" link here if needed */}
-              {/* <a href="#" className="text-sm text-orange-500 hover:text-orange-400 transition-colors duration-200">Forgot Password?</a> */}
-            </div>
+           
 
             <button
               type="submit"

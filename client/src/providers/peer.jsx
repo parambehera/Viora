@@ -45,7 +45,7 @@ export const PeerProvider = ({ children }) => {
   };
 
   const sendStream = async (stream) => {
-    console.log("Adding stream tracks to peer connection...");
+    // console.log("Adding stream tracks to peer connection...");
     
     const senders = peer.getSenders();
     const tracks = stream.getTracks();
@@ -56,33 +56,33 @@ export const PeerProvider = ({ children }) => {
       );
       
       if (existingSender) {
-        console.log(`Replacing ${track.kind} track`);
+        // console.log(`Replacing ${track.kind} track`);
         await existingSender.replaceTrack(track);
       } else {
-        console.log(`Adding new ${track.kind} track`);
+        // console.log(`Adding new ${track.kind} track`);
         peer.addTrack(track, stream);
       }
     }
     
-    console.log("Stream tracks added successfully");
+    // console.log("Stream tracks added successfully");
   };
 
   const handleTrackEvent = useCallback((ev) => {
-    console.log("🎥 Received remote track event!");
+          // console.log("🎥 Received remote track event!");
     const streams = ev.streams;
     if (streams && streams[0]) {
-      console.log("Setting remote stream with tracks:", streams[0].getTracks().length);
+              // console.log("Setting remote stream with tracks:", streams[0].getTracks().length);
       setRemoteStream(streams[0]);
     }
   }, []);
 
   const handleNegotiationNeeded = useCallback(() => {
-    console.log("🔄 Negotiation needed - tracks were added/modified");
+          // console.log("🔄 Negotiation needed - tracks were added/modified");
     setIsNegotiating(true);
   }, []);
 
   const handleSignalingStateChange = useCallback(() => {
-    console.log("📡 Signaling state:", peer.signalingState);
+          // console.log("📡 Signaling state:", peer.signalingState);
     if (peer.signalingState === 'stable') {
       setIsNegotiating(false);
     }
