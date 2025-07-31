@@ -4,7 +4,7 @@ export const validateToken = async () => {
   if (!token) return false;
 
   try {
-    const res = await fetch("http://localhost:3000/api/v1/users/me", {
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v1/users/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
