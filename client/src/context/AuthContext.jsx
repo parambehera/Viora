@@ -8,9 +8,8 @@ import { useNavigate } from "react-router-dom";
 export const AuthContext = createContext({});
 
 const client = axios.create({
-    baseURL: "http://localhost:3000/api/v1/users/"
-})
-
+    baseURL: `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/`
+});
 
 export const AuthProvider = ({ children }) => {
     const authContext = useContext(AuthContext);
@@ -53,32 +52,6 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
-    // const getHistoryOfUser = async () => {
-    //     try {
-    //         let request = await client.get("/get_all_activity", {
-    //             params: {
-    //                 token: localStorage.getItem("token")
-    //             }
-    //         });
-    //         console.log(request.data)
-    //         return request.data
-    //     } catch
-    //      (err) {
-    //         throw err;
-    //     }
-    // }
-
-    // const addToUserHistory = async (meetingCode) => {
-    //     try {
-    //         let request = await client.post("/add_to_activity", {
-    //             token: localStorage.getItem("token"),
-    //             meeting_code: meetingCode
-    //         });
-    //         return request
-    //     } catch (e) {
-    //         throw e;
-    //     }
-    // }
 
 
     const data = {
