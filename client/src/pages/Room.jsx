@@ -106,7 +106,7 @@ const Room = () => {
     socket.on("incoming-call", handleIncomingCall)
     socket.on("call-accepted", handleCallAccepted)
     socket.on("ice-candidate", handleIceCandidate)
-
+  
     return () => {
       socket.off("user-joined", handleNewUserJoined)
       socket.off("incoming-call", handleIncomingCall)
@@ -126,9 +126,7 @@ const Room = () => {
     }
 
     if (!peer) return
-
     peer.addEventListener("icecandidate", handleIceCandidateEvent)
-
     return () => {
       peer.removeEventListener("icecandidate", handleIceCandidateEvent)
     }
@@ -159,7 +157,11 @@ const Room = () => {
   useEffect(() => {
     getUserMediaStream()
   }, [getUserMediaStream])
-
+ useEffect(() => {
+  if (!remoteEmailId) {
+    navigate("/");
+  }
+}, [remoteEmailId, navigate]);
   useEffect(() => {
     if (mainVideoRef.current) {
       const mainStream = !remoteStream ? myStream : (isRemoteVideoMain ? remoteStream : myStream)
