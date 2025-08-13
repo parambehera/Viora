@@ -157,11 +157,7 @@ const Room = () => {
   useEffect(() => {
     getUserMediaStream()
   }, [getUserMediaStream])
- useEffect(() => {
-  if (!remoteEmailId) {
-    navigate("/");
-  }
-}, [remoteEmailId, navigate]);
+
   useEffect(() => {
     if (mainVideoRef.current) {
       const mainStream = !remoteStream ? myStream : (isRemoteVideoMain ? remoteStream : myStream)
