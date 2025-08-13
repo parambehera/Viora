@@ -12,13 +12,16 @@ export default function Auth() {
   const [error, setError] = useState(""); // Keeping for consistency, though 'toast' handles most errors
   const { handleRegister, handleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
-
+const [loading,setLoading] = useState(false);
   let handleAuth = async (e) => {
     e.preventDefault(); // Stop default form submission
-
+    setLoading(true);
     try {
       if (formState === 0) { // Sign Up logic
         let res = await handleRegister(name, username, password);
+        if(res){
+            setLoading(false);
+        }
         toast.success("Registered successfully!");
         toast("Please log in"); // Prompt user to log in after registration
         setUsername(""); // Clear username for potential login
@@ -35,6 +38,7 @@ export default function Auth() {
       }
     } catch (error) {
       // console.log(error);
+      setLoading(false);
       let msg = error.response?.data?.message || "Something went wrong!";
       toast.error(msg);
       // setError(msg); // Set error message
@@ -157,8 +161,9 @@ export default function Auth() {
             <button
               type="submit"
               className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-4 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+              disabled:loading
             >
-              {formState === 0 ? "SIGN UP" : "SIGN IN"}
+              {formState === 0 ? loading?"SIGNING UP.....":"SIGN UP" : loading?"SIGNING IN.....":"SIGN IN"}
             </button>
           </form>
         </div>

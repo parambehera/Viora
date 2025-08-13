@@ -3,7 +3,8 @@ import { toast } from 'react-hot-toast';
 import { useEffect, useCallback, useState, useRef } from "react"
 import { useSocket } from "../providers/Sockets"
 import { usePeer } from "../providers/peer"
-import { Navigate, useNavigate } from 'react-router-dom';
+// BUG FIX: Import useParams to get the roomId from the URL
+import { useNavigate, useParams } from 'react-router-dom';
 
 const Room = () => {
   const socket = useSocket()
@@ -17,8 +18,11 @@ const Room = () => {
   const mainVideoRef = useRef(null)
   const pipVideoRef = useRef(null)
   const navigate = useNavigate();
+  // BUG FIX: Get roomId from URL params
+  const { roomId } = useParams();
 
-  // Helper function to safely get the email string
+  // ... (all other functions like getEmailString, handleNewUserJoined, etc. remain the same) ...
+
   const getEmailString = (data) => {
     if (typeof data === 'string') {
       return data;
@@ -26,20 +30,17 @@ const Room = () => {
     if (typeof data === 'object' && data !== null && typeof data.message === 'string') {
       return data.message;
     }
-    // Fallback if data is neither a string nor an object with a message property
     console.warn("Unexpected format for emailId/from:", data);
-    return ""; // Return an empty string or handle as appropriate
+    return "";
   };
 
   const handleNewUserJoined = useCallback(
     async ({ emailId }) => {
       toast.success("New User joined");
-      // Use the helper function here
       setRemoteEmailId(getEmailString(emailId));
 
       setTimeout(async () => {
         if (myStream) {
-          // console.log("User 1: Sending stream and creating offer")
           await sendStream(myStream)
           const offer = await createOffer()
           socket.emit("user-call", { emailId, offer })
@@ -52,12 +53,8 @@ const Room = () => {
   const handleIncomingCall = useCallback(
     async (data) => {
       const { from, offer } = data
-      // console.log("Incoming call from", from)
-      // Use the helper function here
       setRemoteEmailId(getEmailString(from));
-
       if (myStream) {
-        // console.log("User 2: Sending stream and creating answer")
         await sendStream(myStream)
         const ans = await createAnswer(offer)
         socket.emit("call-accepted", { emailId: from, ans })
@@ -77,10 +74,8 @@ const Room = () => {
   const handleCallAccepted = useCallback(
     async (data) => {
       const { ans } = data
-      // console.log("Call got accepted")
       await setRemoteAnswer(ans)
       if (myStream) {
-        // console.log("User 1: Sending stream after call accepted")
         setTimeout(() => {
           sendStream(myStream)
         }, 500)
@@ -101,20 +96,32 @@ const Room = () => {
     [peer],
   )
 
+  const handleUserDisconnected = useCallback(({partnerEmail}) => {
+    toast.error(`${partnerEmail} has left the call.`);
+    if (myStream) {
+      myStream.getTracks().forEach((track) => track.stop());
+    }
+    setRemoteEmailId("");
+    navigate("/");
+  }, [navigate, myStream]);
+
   useEffect(() => {
     socket.on("user-joined", handleNewUserJoined)
     socket.on("incoming-call", handleIncomingCall)
     socket.on("call-accepted", handleCallAccepted)
     socket.on("ice-candidate", handleIceCandidate)
-  
+    socket.on("user-disconnected", handleUserDisconnected);
+
     return () => {
       socket.off("user-joined", handleNewUserJoined)
       socket.off("incoming-call", handleIncomingCall)
       socket.off("call-accepted", handleCallAccepted)
       socket.off("ice-candidate", handleIceCandidate)
+      socket.off("user-disconnected", handleUserDisconnected);
     }
-  }, [socket, handleIncomingCall, handleNewUserJoined, handleCallAccepted, handleIceCandidate])
+  }, [socket, handleIncomingCall, handleNewUserJoined, handleCallAccepted, handleIceCandidate, handleUserDisconnected])
 
+  // ... (the other useEffect hooks remain the same) ...
   useEffect(() => {
     const handleIceCandidateEvent = (event) => {
       if (event.candidate && remoteEmailId) {
@@ -134,7 +141,6 @@ const Room = () => {
 
   useEffect(() => {
     if (myStream && remoteEmailId) {
-      // console.log("Auto-sending stream for established connection")
       setTimeout(() => {
         sendStream(myStream)
       }, 1000)
@@ -148,7 +154,6 @@ const Room = () => {
         video: true,
       })
       setMyStream(stream)
-      // console.log("Got media stream with tracks:", stream.getTracks().length)
     } catch (error) {
       console.error("Error accessing media devices:", error)
     }
@@ -157,7 +162,8 @@ const Room = () => {
   useEffect(() => {
     getUserMediaStream()
   }, [getUserMediaStream])
-
+  
+  // ... (all video layout useEffects and toggle functions remain the same) ...
   useEffect(() => {
     if (mainVideoRef.current) {
       const mainStream = !remoteStream ? myStream : (isRemoteVideoMain ? remoteStream : myStream)
@@ -214,18 +220,23 @@ const Room = () => {
     }
   }
 
+
   const disconnect = async () => {
     if (myStream) {
       myStream.getTracks().forEach((track) => track.stop())
       setMyStream(null)
     }
-    // Ensure remoteEmailId is a string before emitting
-    socket.emit("disconnect-room", { emailId: getEmailString(remoteEmailId) })
+    // BUG FIX: Send the roomId along with the remote user's email
+    socket.emit("disconnect-room", { 
+        roomId, 
+        emailId: getEmailString(remoteEmailId) 
+    })
     setRemoteEmailId("")
     navigate("/");
-    toast.error("User ended-up the call");
+    toast.error("You ended the call");
   }
 
+  // ... (startScreenSharing and the JSX return statement remain the same) ...
   const startScreenSharing = async () => {
     try {
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
@@ -246,6 +257,9 @@ const Room = () => {
   }
 
   return (
+    // The JSX remains unchanged, so it is omitted here for brevity.
+    // Paste your existing JSX from the <div className={`min-h-screen...`}> onward.
+    // ...
     <div className={`min-h-screen transition-colors duration-300 bg-gradient-to-b from-black via-gray-900 to-gray-800 relative`}>
       <div className="w-full flex justify-between items-center px-8 pt-6 absolute top-0 left-0 z-50">
         <h1
@@ -260,14 +274,12 @@ const Room = () => {
           className={`relative w-full max-w-4xl lg:max-w-6xl h-full max-h-[600px] lg:max-h-[500px] rounded-3xl overflow-hidden shadow-2xl bg-gray-800`}
         >
           {remoteEmailId && (
-            // Adjusted positioning for the "Connected to:" button
-            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20"> {/* Changed top-16 to top-4 */}
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20"> 
               <div
                 className={`px-4 py-2 rounded-full backdrop-blur-sm border bg-black/30 border-gray-600  text-white`}
               >
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  {/* Ensure remoteEmailId is a string here */}
                   <span className="text-sm font-medium"> {remoteEmailId}</span>
                 </div>
               </div>
@@ -291,7 +303,6 @@ const Room = () => {
                   playsInline
                   className="w-full h-full object-cover"
                 />
-                {/* Toggle indicator */}
                 <div className="absolute top-2 right-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center">
                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1zM8 17a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1zM3 8a1 1 0 011-1h2a1 1 0 110 2H4a1 1 0 01-1-1zM15 8a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z" />
@@ -301,11 +312,9 @@ const Room = () => {
             )}
           </div>
 
-          {/* User Info Overlay */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             {!myStream && (
               <>
-                {/* User Avatar */}
                 <div className="w-15 h-15 lg:w-24 lg:h-24 rounded-full bg-gray-300 flex items-center justify-center mb-4">
                   <svg className="w-10 h-10 lg:w-12 lg:h-12 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                     <path
@@ -315,22 +324,14 @@ const Room = () => {
                     />
                   </svg>
                 </div>
-
-                {/* User Name */}
                 <h2 className="text-white text-lg lg:text-xl font-medium mb-2">
-                  {/* Ensure remoteEmailId is a string here */}
                   {remoteEmailId ? `You are connected to ${remoteEmailId}` : "Waiting for connection..."}
                 </h2>
-
-                {/* Connection Status */}
                 <p className="text-gray-300 text-sm">{remoteEmailId ? "Connected" : "Connecting..."}</p>
               </>
             )}
           </div>
-
-          {/* Control Buttons */}
           <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-4 lg:gap-6">
-            {/* Audio Toggle */}
             <button
               onClick={toggleAudio}
               className={`w-12 h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center transition-all duration-200 ${
@@ -353,8 +354,6 @@ const Room = () => {
                 )}
               </svg>
             </button>
-
-            {/* Video Toggle */}
             <button
               onClick={toggleVideo}
               className={`w-12 h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center transition-all duration-200 ${
@@ -373,8 +372,6 @@ const Room = () => {
                 )}
               </svg>
             </button>
-
-            {/* Hang Up */}
             <button
               onClick={disconnect}
               className="w-12 h-12 lg:w-14 lg:h-14 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all duration-200"
@@ -385,8 +382,6 @@ const Room = () => {
               </svg>
             </button>
           </div>
-
-          {/* Additional Controls (Screen Share) - Hidden on small screens */}
           <div className="absolute bottom-6 right-6 hidden lg:flex flex-col gap-3">
             <button
               onClick={startScreenSharing}
@@ -403,8 +398,6 @@ const Room = () => {
               </svg>
             </button>
           </div>
-
-          {/* Mobile Screen Share Button */}
           <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 lg:hidden">
             <button
               onClick={startScreenSharing}
