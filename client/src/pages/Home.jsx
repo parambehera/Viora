@@ -26,9 +26,11 @@ const Home = () => {
         navigate(`/room/${roomId}`);
     }, [navigate]);
 
-    const handleRoomFull = (msg) => {
-        toast.error(msg);
-    };
+ // EVEN BETTER (More Robust)
+const handleRoomFull = (msg) => {
+    const errorMessage = typeof msg === 'object' && msg.message ? msg.message : msg;
+    toast.error(errorMessage);
+};
 
     useEffect(() => {
         socket.on("joined-room", handleRoomJoined);
